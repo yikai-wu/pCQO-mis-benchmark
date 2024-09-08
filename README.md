@@ -103,40 +103,6 @@ The script includes optional initializers for the solvers:
 2. **Degree-based initializer**: Initialize values based on node degrees.
 3. **SDP-based initializer**: Initialize values based on SDP solutions.
 
-Uncomment the relevant section to use an initializer.
-
-### Example: Degree-based Initializer
-
-```python
-mean_vector = []
-degrees = dict(graph["data"].degree())
-
-# Find the maximum degree
-max_degree = max(degrees.values())
-
-for _, degree in graph["data"].degree():
-    degree_init = 1 - degree / max_degree
-    mean_vector.append(degree_init)
-
-min_degree_initialization = max(mean_vector)
-
-for i in range(len(mean_vector)):
-    mean_vector[i] = mean_vector[i] / min_degree_initialization
-
-solver_instance.value_initializer = lambda _: torch.normal(
-    mean=torch.Tensor(mean_vector), std=solver["params"]["std"]
-)
-```
-
-### Example: SDP-based Initializer
-
-```python
-solver_instance.value_initializer = lambda _: torch.normal(
-    mean=initializations[graph["name"]]["SDP_solution"],
-    std=torch.sqrt(torch.ones((len(initializations[graph["name"]]["SDP_solution"])))) * solver["params"]["std"]
-)
-```
-
 ## Output
 
 The script outputs a CSV file containing the results for each graph and solver, including solution sizes and time taken for each solver.
