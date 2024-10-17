@@ -33,9 +33,10 @@ class ReduMIS(Solver):
         self.seed = params.get("seed", None)
         self.time_limit = params.get("time_limit", None)
         self.redumis_path = params.get(
-            "redumis_path", os.path.join(module_directory, "../external/redumis")
+            "redumis_path", os.path.join(module_directory, "../external/KaMIS/deploy/redumis")
         )
         self.solution = {}
+        self.solution_time = 0.0
 
     def solve(self):
         """

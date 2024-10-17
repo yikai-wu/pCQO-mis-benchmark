@@ -84,7 +84,7 @@ def normalize_adjacency_matrix(graph):
     return normalized_adjacency
 
 
-class pCQOMIS(Solver):
+class pCQOMIS_anneal(Solver):
     """
     Solver for the Maximum Independent Set (MIS) problem using a Quadratic Optimization approach with 
     a three-term or two-term loss function.
@@ -128,7 +128,8 @@ class pCQOMIS(Solver):
         self.graph = G
         self.beta = params.get("beta", 1)
         self.number_of_terms = params.get("number_of_terms", "three")
-        self.gamma = params.get("gamma", 775)
+        self.gamma_min = params.get("gamma_min", 2)
+        self.gamma_max = params.get("gamma_max", 775)
         self.batch_size = params.get("batch_size", 256)
         self.steps_per_batch = params.get("steps_per_batch", 350)
         self.output_interval = params.get("output_interval", self.steps_per_batch)
@@ -146,6 +147,7 @@ class pCQOMIS(Solver):
         self.adam_beta_1 = params.get("adam_beta_1", 0.9)
         self.adam_beta_2 = params.get("adam_beta_2", 0.999)
 
+        self.gamma_step = (self.gamma_max - self.gamma_min)/self.number_of_steps
         ### Value Initializer Code
         if self.value_initializer == "random":
             self.value_initializer = torch.nn.init.uniform_
@@ -234,7 +236,8 @@ class pCQOMIS(Solver):
         Matrix_X = Matrix_X.to(device)
         Matrix_X = Matrix_X.requires_grad_(True)
 
-        gamma = torch.tensor(self.gamma, device=device)
+        gamma = torch.tensor(self.gamma_min-self.gamma_step, device=device)
+        gamma_step = torch.tensor(self.gamma_step, device=device)
         beta = torch.tensor(self.beta, device=device)
         learning_rate_alpha = self.learning_rate
         number_of_iterations_T = self.number_of_steps
@@ -282,6 +285,7 @@ class pCQOMIS(Solver):
             torch.cuda.synchronize()
 
         for iteration_t in range(number_of_iterations_T):
+            gamma += gamma_step
 
             if self.test_runtime:
                 start_time = time.time()

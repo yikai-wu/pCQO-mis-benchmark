@@ -9,6 +9,7 @@ from solvers.CPSAT_MIS import CPSATMIS
 from solvers.Gurobi_MIS import GurobiMIS
 from solvers.KaMIS import ReduMIS
 from solvers.dNN_Alkhouri_MIS import DNNMIS
+from solvers.pCQO_MIS_anneal import pCQOMIS_anneal
 
 # Interval for saving solution checkpoints
 SOLUTION_SAVE_INTERVAL = 3
@@ -45,8 +46,8 @@ dataset = assemble_dataset_from_gpickle(graph_directories)
 # Define solvers and their parameters
 solvers = [
     #{"name": "Gurobi", "class": GurobiMIS, "params": {"time_limit": 30}},
-    {"name": "CPSAT", "class": CPSATMIS, "params": {"time_limit": 30}},
-    {"name": "ReduMIS", "class": ReduMIS, "params": {}},
+    #{"name": "CPSAT", "class": CPSATMIS, "params": {"time_limit": 30}},
+    #{"name": "ReduMIS", "class": ReduMIS, "params": {}},
     {
         "name": "pCQO_MIS ER",
         "class": pCQOMIS,
@@ -56,6 +57,63 @@ solvers = [
             "learning_rate": 0.6,
             "number_of_steps": 9900,
             "gamma": 775,
+            "batch_size": 256,
+            "std": 2.25,
+            "threshold": 0.00,
+            "steps_per_batch": 150,
+            "graphs_per_optimizer": 256,
+            "output_interval": 9900,
+        },
+    },
+    {
+        "name": "pCQO_MIS_two",
+        "class": pCQOMIS,
+        "params": {
+            "adam_beta_1": 0.1,
+            "adam_beta_2": 0.25,
+            "learning_rate": 0.6,
+            "number_of_steps": 9900,
+            "number_of_terms": "two",
+            "gamma": 3,
+            "batch_size": 256,
+            "std": 2.25,
+            "threshold": 0.00,
+            "steps_per_batch": 150,
+            "graphs_per_optimizer": 256,
+            "output_interval": 9900,
+        },
+        
+    },
+    {
+        "name": "pCQO_MIS_anneal",
+        "class": pCQOMIS,
+        "params": {
+            "adam_beta_1": 0.1,
+            "adam_beta_2": 0.25,
+            "learning_rate": 0.6,
+            "number_of_steps": 9900,
+            "number_of_terms": "two",
+            "gamma_min": 0.1,
+            "gamma_max": 10,
+            "batch_size": 256,
+            "std": 2.25,
+            "threshold": 0.00,
+            "steps_per_batch": 150,
+            "graphs_per_optimizer": 256,
+            "output_interval": 9900,
+        },
+    },
+        {
+        "name": "pCQO_MIS_anneal_three",
+        "class": pCQOMIS,
+        "params": {
+            "adam_beta_1": 0.1,
+            "adam_beta_2": 0.25,
+            "learning_rate": 0.6,
+            "number_of_steps": 9900,
+            "number_of_terms": "three",
+            "gamma_min": 1,
+            "gamma_max": 775,
             "batch_size": 256,
             "std": 2.25,
             "threshold": 0.00,
@@ -127,7 +185,7 @@ def table_output(solutions, datasets, current_stage, total_stages):
 
     # Save the data to a CSV file
     table = pandas.DataFrame(table_data, columns=table_headers)
-    table.to_csv(f"zero_to_stage_{current_stage}_of_{total_stages}_total_stages.csv")
+    table.to_csv(f"results/pcqo_er_anneal_2/zero_to_stage_{current_stage}_of_{total_stages}_total_stages.csv")
 
 #### BENCHMARKING CODE ####
 solutions = []

@@ -18,7 +18,7 @@ SOLUTION_SAVE_INTERVAL = 3
 # List of directories containing graph data
 graph_directories = [
     ### ER 700-800 Graphs ###
-    "./graphs/er_700-800"
+    "./graphs/rb800-1200/test"
     ### GNM 300 Convergence Graphs ###
     # "./graphs/gnm_random_graph_convergence",
     ### SATLIB Graphs ###
@@ -45,8 +45,8 @@ dataset = assemble_dataset_from_gpickle(graph_directories)
 # Define solvers and their parameters
 solvers = [
     #{"name": "Gurobi", "class": GurobiMIS, "params": {"time_limit": 30}},
-    {"name": "CPSAT", "class": CPSATMIS, "params": {"time_limit": 30}},
-    {"name": "ReduMIS", "class": ReduMIS, "params": {}},
+    #{"name": "CPSAT", "class": CPSATMIS, "params": {"time_limit": 30}},
+    #{"name": "ReduMIS", "class": ReduMIS, "params": {}},
     {
         "name": "pCQO_MIS ER",
         "class": pCQOMIS,
@@ -127,7 +127,7 @@ def table_output(solutions, datasets, current_stage, total_stages):
 
     # Save the data to a CSV file
     table = pandas.DataFrame(table_data, columns=table_headers)
-    table.to_csv(f"zero_to_stage_{current_stage}_of_{total_stages}_total_stages.csv")
+    table.to_csv(f"results/pcqo_rb800-1200/zero_to_stage_{current_stage}_of_{total_stages}_total_stages.csv")
 
 #### BENCHMARKING CODE ####
 solutions = []

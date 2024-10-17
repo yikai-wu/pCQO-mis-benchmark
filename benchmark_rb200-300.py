@@ -18,7 +18,7 @@ SOLUTION_SAVE_INTERVAL = 3
 # List of directories containing graph data
 graph_directories = [
     ### ER 700-800 Graphs ###
-    "./graphs/er_700-800"
+    "./graphs/rb200-300/test"
     ### GNM 300 Convergence Graphs ###
     # "./graphs/gnm_random_graph_convergence",
     ### SATLIB Graphs ###
@@ -127,7 +127,7 @@ def table_output(solutions, datasets, current_stage, total_stages):
 
     # Save the data to a CSV file
     table = pandas.DataFrame(table_data, columns=table_headers)
-    table.to_csv(f"zero_to_stage_{current_stage}_of_{total_stages}_total_stages.csv")
+    table.to_csv(f"results/rb200-300/zero_to_stage_{current_stage}_of_{total_stages}_total_stages.csv")
 
 #### BENCHMARKING CODE ####
 solutions = []
