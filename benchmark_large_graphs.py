@@ -18,9 +18,6 @@ logging.basicConfig(filename='benchmark.log', level=logging.INFO, style="{")
 # Interval for saving solution checkpoints
 SOLUTION_SAVE_INTERVAL = 1
 
-# Interval for saving solution checkpoints
-SOLUTION_SAVE_INTERVAL = 1
-
 #### GRAPH IMPORT ####
 
 # List of directories containing graph data
@@ -162,6 +159,7 @@ def table_output(solutions, datasets, current_stage, total_stages):
             table_row.extend([solution["data"]["size"] for solution in dataset_solutions])
             table_row.extend([solution['data']['initializations_solved'] for solution in dataset_solutions])
             table_row.extend([solution["time_taken"] for solution in dataset_solutions])
+
             table_data.append(table_row)
 
     # Generate headers for the CSV file
