@@ -1,7 +1,7 @@
 # pCQO-MIS v1 #
 
 ## Description ##
-This repository houses the code for a submission titled: "Revisiting Quadratic Optimization for the Maximum Independent Set Problem with Differential Cliques" (pCQO-MIS). The goal of this repository is to provide tools and implementations for the experiments performed in the submission.
+This repository houses the code for (pCQO-MIS) method. The goal of this repository is to provide tools and implementations for the experiments performed in the submission.
 
 - [pCQO-MIS v1](#pcqo-mis-v1)
   - [Description](#description)
@@ -15,7 +15,6 @@ This repository houses the code for a submission titled: "Revisiting Quadratic O
   - [Customization](#customization)
     - [Initializers](#initializers)
     - [Example: Degree-based Initializer](#example-degree-based-initializer)
-    - [Example: SDP-based Initializer](#example-sdp-based-initializer)
   - [Output](#output)
   - [Notes](#notes)
 
@@ -23,7 +22,7 @@ This repository houses the code for a submission titled: "Revisiting Quadratic O
 ## Prerequisites
 
 - Python 3.10
-- Required libraries: `pandas`, `torch`, `mosek`, `gurobipy`, `ortools`
+- Required libraries: `pandas`, `torch`, `gurobipy`, `ortools`
 
 ## Setup and Installation
 
@@ -40,9 +39,10 @@ This repository houses the code for a submission titled: "Revisiting Quadratic O
    ```bash
    pip install -r requirements.txt
    ```
-5. Obtain licenses for MOSEK and Gurobi and install those licenses on the machine you will be running this repository on.
-6. Clone the [KaMIS project](https://github.com/KarlsruheMIS/KaMIS) and build a copy of the ReduMIS program. Place the program in the `external` folder of this repository.
-7. Run the benchmarking suite:
+5. (If you want to run Gurobi) Obtain licenses for Gurobi and install that license on the machine you will be running this repository on.
+6. (If you want to run ReduMIS) Clone the [KaMIS project](https://github.com/KarlsruheMIS/KaMIS) and build a copy of the ReduMIS program. Place the program in the `external` folder of this repository.
+7. Browse the /graphs folder to retrieve the datasets used in the original experiments.
+8. Run the benchmarking suite:
    ```bash
    python benchmark.py
    ```
@@ -101,7 +101,31 @@ The script includes optional initializers for the solvers:
 
 1. **Default initializer**: Uniform distribution.
 2. **Degree-based initializer**: Initialize values based on node degrees.
-3. **SDP-based initializer**: Initialize values based on SDP solutions.
+
+Specify the relevant initializer in the solver's params.
+
+### Example: Degree-based Initializer
+
+```python
+mean_vector = []
+degrees = dict(graph["data"].degree())
+
+# Find the maximum degree
+max_degree = max(degrees.values())
+
+for _, degree in graph["data"].degree():
+    degree_init = 1 - degree / max_degree
+    mean_vector.append(degree_init)
+
+min_degree_initialization = max(mean_vector)
+
+for i in range(len(mean_vector)):
+    mean_vector[i] = mean_vector[i] / min_degree_initialization
+
+solver_instance.value_initializer = lambda _: torch.normal(
+    mean=torch.Tensor(mean_vector), std=solver["params"]["std"]
+)
+```
 
 ## Output
 

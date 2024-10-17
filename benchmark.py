@@ -2,16 +2,22 @@ from copy import deepcopy
 import pickle
 import pandas
 import torch
+from datetime import datetime
+import logging
+import tqdm
 
 from lib.dataset_generation import assemble_dataset_from_gpickle
-from solvers.pCQO_MIS import pCQOMIS
-from solvers.CPSAT_MIS import CPSATMIS
-from solvers.Gurobi_MIS import GurobiMIS
-from solvers.KaMIS import ReduMIS
-from solvers.dNN_Alkhouri_MIS import DNNMIS
+from solvers.pCQO_MIS import pCQOMIS_MGD
+# from solvers.CPSAT_MIS import CPSATMIS
+# from solvers.Gurobi_MIS import GurobiMIS
+# from solvers.KaMIS import ReduMIS
+# from solvers.dNN_Alkhouri_MIS import DNNMIS
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='benchmark.log', level=logging.INFO, style="{")
 
 # Interval for saving solution checkpoints
-SOLUTION_SAVE_INTERVAL = 3
+SOLUTION_SAVE_INTERVAL = 1
 
 #### GRAPH IMPORT ####
 
@@ -43,45 +49,75 @@ dataset = assemble_dataset_from_gpickle(graph_directories)
 #### SOLVER DESCRIPTION ####
 
 # Define solvers and their parameters
-solvers = [
-    #{"name": "Gurobi", "class": GurobiMIS, "params": {"time_limit": 30}},
-    {"name": "CPSAT", "class": CPSATMIS, "params": {"time_limit": 30}},
-    {"name": "ReduMIS", "class": ReduMIS, "params": {}},
-    {
-        "name": "pCQO_MIS ER",
-        "class": pCQOMIS,
-        "params": {
-            "adam_beta_1": 0.1,
-            "adam_beta_2": 0.25,
-            "learning_rate": 0.6,
-            "number_of_steps": 9900,
-            "gamma": 775,
-            "batch_size": 256,
-            "std": 2.25,
-            "threshold": 0.00,
-            "steps_per_batch": 150,
-            "graphs_per_optimizer": 256,
-            "output_interval": 9900,
-        },
-    },
-    # Uncomment and configure the following solver for SATLIB datasets if needed
+base_solvers = [
+    # {"name": "Gurobi", "class": GurobiMIS, "params": {"time_limit": 30}},
+    # {"name": "CPSAT", "class": CPSATMIS, "params": {"time_limit": 30}},
+    # {"name": "ReduMIS", "class": ReduMIS, "params": {"time_limit":30}},
     # {
-    #     "name": "pCQO_MIS SATLIB",
-    #     "class": pCQOMIS,
+    #     "name": "pCQO_MIS ER 700-800 MGD",
+    #     "class": pCQOMIS_MGD,
     #     "params": {
-    #         "adam_beta_1": 0.9,
-    #         "adam_beta_2": 0.99,
-    #         "learning_rate": 0.9,
-    #         "number_of_steps": 3000,
-    #         "gamma": 775,
+    #         "learning_rate": 0.000009,
+    #         "momentum": 0.9,
+    #         "number_of_steps": 225000,
+    #         "gamma": 350,
+    #         "gamma_prime": 7,
     #         "batch_size": 256,
     #         "std": 2.25,
     #         "threshold": 0.00,
-    #         "steps_per_batch": 50,
+    #         "steps_per_batch": 450,
+    #         "output_interval": 225002,
+    #         "value_initializer": "degree",
+    #         "checkpoints": [450] + list(range(4500, 225001, 4500))
+    #     },
+    # },
+    # Uncomment and configure the following solver for SATLIB datasets if needed
+    # {
+    #     "name": "pCQO_MIS SATLIB MGD",
+    #     "class": pCQOMIS_MGD,
+    #     "params": {
+    #         "learning_rate": 0.0003,
+    #         "momentum": 0.875,
+    #         "number_of_steps": 3000,
+    #         "gamma": 900,
+    #         "gamma_prime": 1,
+    #         "batch_size": 256,
+    #         "std": 2.25,
+    #         "threshold": 0.00,
+    #         "steps_per_batch": 30,
     #         "output_interval": 10000,
+    #         "value_initializer": "degree",
+    #         "number_of_terms": "three",
+    #         "sample_previous_batch_best": True,
+    #         "checkpoints": [30] + list(range(300,3300,300)),
     #     },
     # }
 ]
+
+solvers = base_solvers
+
+## Grid Search (Commented Out)
+# Uncomment and configure the following section for hyperparameter tuning
+solvers = []
+for solver in base_solvers:
+    for learning_rate in [0.001]:
+        for momentum in [0.5]:
+            for gamma_gamma_prime in [(500, 1),]:
+                for batch_size in [256]:
+                    for terms in ["three"]:
+                        modified_solver = deepcopy(solver)
+                        modified_solver["name"] = (
+                            f"{modified_solver['name']} batch_size={batch_size}, learning_rate={learning_rate}, momentum={momentum}, gamma={gamma_gamma_prime[0]}, gamma_prime={gamma_gamma_prime[1]},  terms={terms}"
+                        )
+                        modified_solver["params"]["learning_rate"] = learning_rate
+                        modified_solver["params"]["momentum"] = momentum
+                        modified_solver["params"]["gamma"] = gamma_gamma_prime[0]
+                        modified_solver["params"]["gamma_prime"] = gamma_gamma_prime[1]
+                        modified_solver["params"]["number_of_terms"] = terms
+                        modified_solver["params"]["batch_size"] = batch_size
+                        solvers.append(modified_solver)
+
+
 
 #### SOLUTION OUTPUT FUNCTION ####
 def table_output(solutions, datasets, current_stage, total_stages):
@@ -127,49 +163,52 @@ def table_output(solutions, datasets, current_stage, total_stages):
 
     # Save the data to a CSV file
     table = pandas.DataFrame(table_data, columns=table_headers)
-    table.to_csv(f"zero_to_stage_{current_stage}_of_{total_stages}_total_stages.csv")
+    table.to_csv(f"zero_to_stage_{current_stage}_of_{total_stages}_total_stages_{datetime.now()}.csv")
 
 #### BENCHMARKING CODE ####
 solutions = []
+path_solutions = []
 
 # Calculate total number of stages
 stage = 0
 stages = len(solvers) * len(dataset)
 
-# Optional: Load SDP initializer if needed
-# initializations = pickle.load(open("./solutions/SDP/SDP_Generation_SATLIB", "rb"))
-
 # Iterate over each graph in the dataset
-for graph in dataset:
-    for solver in solvers:
+for graph in tqdm.tqdm(dataset, desc=" Iterating Through Graphs", position=0):
+    for solver in tqdm.tqdm(solvers, desc=" Iterating Solvers for Each Graph"):
         solver_instance = solver["class"](graph["data"], solver["params"])
-
-        # Optional: Apply SDP-based initializer if needed
-        # solver_instance.value_initializer = lambda _: torch.normal(
-        #     mean=initializations[graph["name"]]["SDP_solution"],
-        #     std=torch.sqrt(torch.ones((len(initializations[graph["name"]]["SDP_solution"])))) * solver["params"]["std"]
-        # )
 
         # Solve the problem using the current solver
         solver_instance.solve()
-        solution = {
-            "solution_method": solver["name"],
-            "dataset_name": graph["name"],
-            "data": deepcopy(solver_instance.solution),
-            "time_taken": deepcopy(solver_instance.solution_time),
-        }
-        print(f"CSV: {graph['name']}, {solution['data']['size']}, {solution['time_taken']}")
-        solutions.append(solution)
+        if hasattr(solver_instance, "solutions") and len(solver_instance.solutions) > 0:
+            for solution in solver_instance.solutions:
+                pretty_solution = {
+                    "solution_method": f"{solver['name']} at step {solution['number_of_steps']}",
+                    "dataset_name": graph["name"],
+                    "data": deepcopy(solution),
+                    "time_taken": deepcopy(solution["time"]),
+                }
+                solutions.append(pretty_solution)
+        else:
+            solution = {
+                "solution_method": solver["name"],
+                "dataset_name": graph["name"],
+                "data": deepcopy(solver_instance.solution),
+                "time_taken": deepcopy(solver_instance.solution_time),
+            }
+            logging.info("CSV: %s, %s, %s", graph['name'], solution['data']['size'], solution['time_taken'])
+            solutions.append(solution)
         del solver_instance
 
         # Update progress and save checkpoint if necessary
         stage += 1
-        print(f"Completed {stage} / {stages}")
+        logger.info("Completed %s / %s", stage, stages)
+
 
         if stage % (SOLUTION_SAVE_INTERVAL * len(solvers)) == 0:
-            print("Now saving a checkpoint.")
+            logger.info("Now saving a checkpoint.")
             table_output(solutions, dataset, stage, stages)
 
 # Save final results
-print("Now saving final results.")
+logger.info("Now saving final results.")
 table_output(solutions, dataset, stage, stages)
