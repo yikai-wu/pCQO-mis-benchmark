@@ -5,6 +5,7 @@ This repository houses the code for (pCQO-MIS) method. The goal of this reposito
 
 - [pCQO-MIS v1](#pcqo-mis-v1)
   - [Description](#description)
+  - [pCQO-MIS C++ Benchmark Setup](#pcqo-mis-c-benchmark-setup)
   - [Prerequisites](#prerequisites)
   - [Setup and Installation](#setup-and-installation)
   - [Configuration](#configuration)
@@ -16,8 +17,17 @@ This repository houses the code for (pCQO-MIS) method. The goal of this reposito
     - [Initializers](#initializers)
     - [Example: Degree-based Initializer](#example-degree-based-initializer)
   - [Output](#output)
+  - [Basic Tuning Procedure](#tuning)
   - [Notes](#notes)
 
+## pCQO-MIS C++ Benchmark Setup
+
+1. Install [LibTorch](https://pytorch.org/get-started/locally/).
+2. Clone the repository and navigate to the ./cpp_impl/build directory.
+3. Run the following cmake command `cmake -DCMAKE_PREFIX_PATH={path to libtorch} ..`
+4. Run `cmake --build . --config Release` to build the program.
+5. Execute the program: `./pcqomis ./path/to/directory/with/graphs > results.txt` (make sure that the graphs you test are in DIMACS text format!)
+6. *Optional*: Analyze the results of the solver using ./cpp_impl/output.py
 
 ## Prerequisites
 
@@ -131,9 +141,14 @@ solver_instance.value_initializer = lambda _: torch.normal(
 
 The script outputs a CSV file containing the results for each graph and solver, including solution sizes and time taken for each solver.
 
+## Basic hyper-parameters fine-tuning: 
+For any new graph, we provide a basic hyper-parmeter search procedure that assist in setting up $T$ and $\alpha$. See notebook ```pCQO_MIS_param_tuning_for_feasible_solutions_v01.ipynb``` for details and an example. 
+
 ## Notes
 
 - Ensure the graph data and solver implementations are correctly set up and accessible.
 - Adjust the `SOLUTION_SAVE_INTERVAL` as needed to control the frequency of checkpoint saves.
 - The benchmarking process may be time-consuming depending on the number and size of graphs, and the solvers used.
 - Large datasets that exceed local RAM can be run using the ```benchmark_large_graphs.py``` script.
+
+
